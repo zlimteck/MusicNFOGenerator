@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil
 from dotenv import load_dotenv
 import requests
+import re
 
 # Load environment variables
 load_dotenv()
@@ -71,6 +72,16 @@ def search_discogs(artist, album):
 
     return "Unknown"
 
+# Function to extract source from the folder name using regex
+def extract_source_from_release_name(release_name):
+    # Define patterns for possible sources
+    source_patterns = ["CD", "WEB", "Vinyl", "Digital"]
+    
+    for source in source_patterns:
+        if re.search(rf"\b{source}\b", release_name, re.IGNORECASE):
+            return source
+    return "Unknown"  # Default if no source found
+
 # Function to generate an NFO file
 def generate_nfo(folder_path, discogs_link=None):
     with open(TEMPLATE_PATH, "r", encoding="utf-8") as template_file:
@@ -89,6 +100,9 @@ def generate_nfo(folder_path, discogs_link=None):
     total_size = sum(f.stat().st_size for f in audio_files)
     artist, album, genre, source, year = None, None, None, None, None
 
+    # Extract the source from the release name (folder name)
+    source = extract_source_from_release_name(folder.name)
+
     for audio_file in audio_files:
         media_info = get_media_info(str(audio_file))
         if not media_info:
@@ -102,8 +116,6 @@ def generate_nfo(folder_path, discogs_link=None):
             album = general_info.get("Album", "Unknown")
         if genre is None:
             genre = general_info.get("Genre", "Unknown")
-        if source is None:
-            source = general_info.get("OriginalSourceForm", general_info.get("Format", "Unknown"))
         if year is None:
             year = general_info.get("Recorded_Date", "Unknown")
 
